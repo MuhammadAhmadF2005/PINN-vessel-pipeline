@@ -1,5 +1,30 @@
-Architecture.md
-eval_spec.md
-PRD.md
-Tasks.md
-tech_stack.md
+# Python/ML ignores
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+env.bak/
+venv.bak/
+
+# Project specifics
+data/
+mlruns/
+mlflow.db
+models/artifacts/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Secrets
+.env
+.env.local
