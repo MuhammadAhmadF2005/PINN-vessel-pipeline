@@ -1,0 +1,85 @@
+version: '3.8'
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mqtt_broker
+    ports:
+      - "1883:1883"
+      - "9001:9001"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+    restart: unless-stopped
+
+  influxdb:
+    image: influxdb:2
+    container_name: time_series_db
+    ports:
+      - "8086:8086"
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=adminpassword
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG:-vessel_org}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET:-vessel_data}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN:-my-super-secret-auth-token-123}
+    volumes:
+      - influxdb_data:/var/lib/influxdb2
+    restart: unless-stopped
+
+  api:
+    build: 
+      context: .
+      dockerfile: api/Dockerfile
+    container_name: inference_api
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./models/artifacts:/app/models/artifacts
+      - ./data:/app/data
+      - ./api:/app/api
+    depends_on:
+      - mosquitto
+      - influxdb
+    restart: unless-stopped
+
+  publisher:
+    build:
+      context: .
+      dockerfile: streaming/Dockerfile.publisher
+    container_name: data_publisher
+    env_file:
+      - .env
+    volumes:
+      - ./data:/app/data
+    depends_on:
+      - mosquitto
+    restart: unless-stopped
+
+  feature_worker:
+    build:
+      context: .
+      dockerfile: streaming/Dockerfile.worker
+    container_name: feature_worker
+    env_file:
+      - .env
+    depends_on:
+      - mosquitto
+      - influxdb
+    restart: unless-stopped
+
+  dashboard:
+    build:
+      context: ./dashboard
+      dockerfile: Dockerfile
+    container_name: react_dashboard
+    ports:
+      - "${DASHBOARD_PORT:-3000}:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  influxdb_data:
