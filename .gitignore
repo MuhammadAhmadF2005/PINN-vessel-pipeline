@@ -28,3 +28,11 @@ Thumbs.db
 # Secrets
 .env
 .env.local
+.env.example
+
+#other
+eval_spec.md
+PRD.md
+Tasks.md
+Architecture.md
+tech_stack.md###
