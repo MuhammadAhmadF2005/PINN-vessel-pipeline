@@ -179,6 +179,3 @@ Fault data is rare and fault types are unbounded. Training anomaly detectors on 
 
 ---
 
-## Resume bullet
-
-> **Physics-Informed Predictive Maintenance Pipeline** — end-to-end MLOps system using PINNs for anomaly detection in industrial pressure vessels; ODE residuals as anomaly scores achieved Avg F1=0.85 and detected faults 42s earlier than LSTM autoencoder baseline; real-time inference via FastAPI, experiment tracking with MLflow, deployed via Docker + GitHub Actions on AWS EC2.
