@@ -2,7 +2,7 @@
 
 Early fault detection for industrial pressure vessels using Physics-Informed Neural Networks (PINNs). The PINN's ODE residual doubles as an anomaly score — when sensor readings start violating thermodynamic laws, the residual spikes before the fault becomes visible to statistical models.
 
-**Status:** Phase 1 complete. Phase 2 (streaming pipeline + dashboard) in progress.
+**Status:** Phase 1 & Phase 2 complete! Fully operational native streaming pipeline and revamped 3D interactive digital twin dashboard.
 
 ---
 
@@ -121,6 +121,45 @@ python -m models.train
 mlflow ui --backend-store-uri sqlite:///mlflow.db
 # Open http://localhost:5000
 ```
+
+### Phase 2 — Real-time MQTT Streaming & 3D Digital Twin Dashboard
+
+To run the full streaming pipeline and real-time 3D dashboard locally:
+
+1. **Start Infrastructure Services** (ensure Mosquitto MQTT broker and InfluxDB are running locally):
+   - Mosquitto broker port: `1883`
+   - InfluxDB v2 port: `8086` (create organization `vessel_org`, bucket `vessel_data`, and set `INFLUXDB_TOKEN` in `.env`)
+
+2. **Start Backend Services**:
+   - Run the FastAPI inference API:
+     ```bash
+     python -m uvicorn api.main:app --host 0.0.0.0 --port 8000
+     ```
+   - Run the Feature Worker (consumes sensor data, scores, writes to InfluxDB & SQLite):
+     ```bash
+     python -m streaming.feature_worker
+     ```
+
+3. **Start the React 3D Twin Dashboard**:
+   - Navigate to the `dashboard/` directory, install packages, and start Vite:
+     ```bash
+     cd dashboard
+     npm install
+     npm run dev
+     ```
+   - Open **[http://localhost:5173/](http://localhost:5173/)** in your browser.
+
+4. **Launch the Telemetry Simulator**:
+   - Replay the test data to simulate live sensor streaming:
+     ```bash
+     python -m streaming.publisher --speed 0.5
+     ```
+
+As the telemetry streams, the revamped glassmorphic dashboard will display:
+- **Interactive 3D Vessel Twin (Three.js)**: Color shifts on temperature (cyan/blue $\rightarrow$ red) and internal particle flow reflecting pressure. OrbitControls allow free model rotation/zoom.
+- **Glowing Alert Highlights**: Visual alarms pulse on the 3D model (seal ring, heater coil, inlet pipe) when corresponding faults trigger.
+- **GSAP Telemetry Animations**: High-performance count-up/down animations for metrics, and slide-in alert cards.
+- **Full-height Alert Feed & Scores Charts**: Plotted comparison anomaly scores and a scrollable alert log.
 
 ---
 
