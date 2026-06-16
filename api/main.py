@@ -69,6 +69,7 @@ class SensorData(BaseModel):
     run_id: str | int
     pressure: float
     temperature: float
+    fault_type: Optional[str] = None
 
 class ScoreRequest(BaseModel):
     window: List[SensorData]  # The latest window of data, size >= 20 for LSTM
@@ -80,6 +81,7 @@ class ScoreResponse(BaseModel):
     iso_score: float
     lstm_score: float
     is_anomaly: bool
+    fault_type: Optional[str] = None
     
 class HistoryResponse(BaseModel):
     id: int
@@ -91,6 +93,7 @@ class HistoryResponse(BaseModel):
     iso_score: Optional[float] = None
     lstm_score: Optional[float] = None
     is_anomaly: bool
+    fault_type: Optional[str] = None
 
 class AlertResponse(BaseModel):
     id: int
@@ -98,6 +101,7 @@ class AlertResponse(BaseModel):
     run_id: str
     alert_message: str
     severity: str
+    fault_type: Optional[str] = None
 
 def process_and_save_score(data: ScoreRequest, db: Session) -> ScoreResponse:
     if "pinn" not in models or "iso_forest" not in models or "lstm_ae" not in models:
@@ -136,6 +140,7 @@ def process_and_save_score(data: ScoreRequest, db: Session) -> ScoreResponse:
     )
     
     latest_data = window[-1]
+    fault_type = latest_data.fault_type
     
     # Save to database
     db_score = ScoreHistory(
@@ -145,16 +150,21 @@ def process_and_save_score(data: ScoreRequest, db: Session) -> ScoreResponse:
         pinn_score=latest_pinn,
         iso_score=latest_iso,
         lstm_score=latest_lstm,
-        is_anomaly=int(is_anomaly)
+        is_anomaly=int(is_anomaly),
+        fault_type=fault_type
     )
     db.add(db_score)
     
     # If anomaly, add to alert log
     if is_anomaly:
+        alert_msg = f"Anomaly detected! PINN: {latest_pinn:.2f}, ISO: {latest_iso:.2f}, LSTM: {latest_lstm:.2f}"
+        if fault_type and fault_type != "normal":
+            alert_msg = f"Fault detected: {fault_type.replace('_', ' ').title()}! PINN: {latest_pinn:.2f}, ISO: {latest_iso:.2f}, LSTM: {latest_lstm:.2f}"
         alert = AlertLog(
             run_id=latest_data.run_id,
-            alert_message=f"Anomaly detected! PINN: {latest_pinn:.2f}, ISO: {latest_iso:.2f}, LSTM: {latest_lstm:.2f}",
-            severity="CRITICAL"
+            alert_message=alert_msg,
+            severity="CRITICAL",
+            fault_type=fault_type
         )
         db.add(alert)
         
@@ -166,7 +176,8 @@ def process_and_save_score(data: ScoreRequest, db: Session) -> ScoreResponse:
         pinn_score=latest_pinn,
         iso_score=latest_iso,
         lstm_score=latest_lstm,
-        is_anomaly=is_anomaly
+        is_anomaly=is_anomaly,
+        fault_type=fault_type
     )
 
 @app.post("/score", response_model=ScoreResponse)
@@ -192,7 +203,8 @@ def get_history(limit: int = 100, db: Session = Depends(get_db)):
             pinn_score=r.pinn_score,
             iso_score=r.iso_score,
             lstm_score=r.lstm_score,
-            is_anomaly=bool(r.is_anomaly)
+            is_anomaly=bool(r.is_anomaly),
+            fault_type=r.fault_type
         ) for r in records
     ]
 
@@ -206,6 +218,7 @@ def get_alerts(limit: int = 50, db: Session = Depends(get_db)):
             timestamp=a.timestamp.isoformat(),
             run_id=a.run_id,
             alert_message=a.alert_message,
-            severity=a.severity
+            severity=a.severity,
+            fault_type=a.fault_type
         ) for a in alerts
     ]

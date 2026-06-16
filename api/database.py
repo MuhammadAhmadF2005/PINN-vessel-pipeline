@@ -26,6 +26,7 @@ class ScoreHistory(Base):
     
     # Threshold decisions (boolean stored as int)
     is_anomaly = Column(Integer) # ensemble decision
+    fault_type = Column(String, nullable=True)
 
 class AlertLog(Base):
     __tablename__ = "alert_log"
@@ -35,6 +36,7 @@ class AlertLog(Base):
     run_id = Column(String, index=True)
     alert_message = Column(String)
     severity = Column(String) # e.g. WARNING, CRITICAL
+    fault_type = Column(String, nullable=True)
 
 def init_db():
     Base.metadata.create_all(bind=engine)
