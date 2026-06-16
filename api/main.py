@@ -4,6 +4,7 @@ import numpy as np
 from pathlib import Path
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Depends, HTTPException, BackgroundTasks
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional
 from sqlalchemy.orm import Session
@@ -54,10 +55,18 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="PIPM Inference API", lifespan=lifespan)
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Pydantic Schemas
 class SensorData(BaseModel):
     timestamp: float
-    run_id: str
+    run_id: str | int
     pressure: float
     temperature: float
 
@@ -78,9 +87,9 @@ class HistoryResponse(BaseModel):
     run_id: str
     pressure: float
     temperature: float
-    pinn_score: float
-    iso_score: float
-    lstm_score: float
+    pinn_score: Optional[float] = None
+    iso_score: Optional[float] = None
+    lstm_score: Optional[float] = None
     is_anomaly: bool
 
 class AlertResponse(BaseModel):

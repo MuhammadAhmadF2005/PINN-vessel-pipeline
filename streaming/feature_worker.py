@@ -56,6 +56,7 @@ API_URL = os.getenv("API_URL", "http://api:8000")
 def on_message(client, userdata, msg):
     try:
         payload = json.loads(msg.payload.decode("utf-8"))
+        payload["run_id"] = str(payload.get("run_id", "unknown"))
         history.append(payload)
         
         # Keep only recent history to prevent memory leak
